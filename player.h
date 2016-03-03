@@ -1,7 +1,6 @@
 #ifndef __PLAYER_H__
 #define __PLAYER_H__
 
-#include <iostream>
 #include "common.h"
 #include "board.h"
 using namespace std;
@@ -12,6 +11,8 @@ private:
     Board* _board;
     Side _side;
     Side _opponentSide;
+
+    Move *findFirstMove();
 
 public:
     Player(Side side);

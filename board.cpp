@@ -1,6 +1,27 @@
 #include "board.h"
 
 /*
+ * Shows valid positions to play in each direction: North, 
+ * South, East, or West. Treats board configuration as a 
+ * bitboard.
+ */
+bitset<64> N(bitset<64> x) {
+    return x << 8;
+}
+
+bitset<64> S(bitset<64> x) {
+    return x >> 8;
+}
+
+bitset<64> W(bitset<64> x) {
+    return (x & bitset<64>(0x7f7f7f7f7f7f7f7f)) << 1;
+}
+
+bitset<64> E(bitset<64> x) {
+    return (x & bitset<64>(0xfefefefefefefefe)) >> 1;
+}
+
+/*
  * Make a standard 8x8 othello board and initialize it to the standard setup.
  */
 Board::Board() {
@@ -8,6 +29,7 @@ Board::Board() {
     taken.set(3 + 8 * 4);
     taken.set(4 + 8 * 3);
     taken.set(4 + 8 * 4);
+
     black.set(4 + 8 * 3);
     black.set(3 + 8 * 4);
 }
@@ -160,6 +182,151 @@ int Board::countBlack() {
  */
 int Board::countWhite() {
     return taken.count() - black.count();
+}
+
+/*
+ * Generates all possible moves for a specific side. To avoid
+ * return an entire vector, the vector to be filled is passed
+ * in by reference as an argument.
+ */
+void Board::getPossibleMoves(Side side, vector<Move *>& possibleMoves) {
+    possibleMoves.clear(); // Makes sure vector is empty
+   
+    bitset<64> own;
+    bitset<64> opp;
+    if (side == BLACK) {
+	own = black;
+	opp = taken & (~black);
+    }
+    else {
+	own = taken & (~black);
+	opp = black;
+    }
+
+    bitset<64> moves(0x0);
+    
+    // Gets all moves possible by playing above an enemy piece
+    bitset<64> possible = N(own) & opp;
+    possible |= N(possible) & opp;
+    possible |= N(possible) & opp;
+    possible |= N(possible) & opp;
+    possible |= N(possible) & opp;
+    
+    moves |= N(possible) & (~taken);
+    
+    // Gets all moves possible by playing below an enemy piece
+    possible = S(own) & opp;
+    possible |= S(possible) & opp;
+    possible |= S(possible) & opp;
+    possible |= S(possible) & opp;
+    possible |= S(possible) & opp;
+    
+    moves |= S(possible) & (~taken);
+    
+    // Gets all moves possible by playing right of an enemy piece
+    possible = E(own) & opp;
+    possible |= E(possible) & opp;
+    possible |= E(possible) & opp;
+    possible |= E(possible) & opp;
+    possible |= E(possible) & opp;
+    
+    moves |= E(possible) & (~taken);
+    
+    // Gets all moves possible by playing left of an enemy piece
+    possible = W(own) & opp;
+    possible |= W(possible) & opp;
+    possible |= W(possible) & opp;
+    possible |= W(possible) & opp;
+    possible |= W(possible) & opp;
+    
+    moves |= W(possible) & (~taken);
+    
+    // Gets all moves possible by playing diagonally right above 
+    // an enemy piece
+    possible = N(E(own)) & opp;
+    possible |= N(E(possible)) & opp;
+    possible |= N(E(possible)) & opp;
+    possible |= N(E(possible)) & opp;
+    possible |= N(E(possible)) & opp;
+    
+    moves |= N(E(possible)) & (~taken);
+    
+    // Gets all moves possible by playing diagonally left above 
+    // an enemy piece
+    possible = N(W(own)) & opp;
+    possible |= N(W(possible)) & opp;
+    possible |= N(W(possible)) & opp;
+    possible |= N(W(possible)) & opp;
+    possible |= N(W(possible)) & opp;
+    
+    moves |= N(W(possible)) & (~taken);
+    
+    // Gets all moves possible by playing diagonally right below 
+    // an enemy piece
+    possible = S(E(own)) & opp;
+    possible |= S(E(possible)) & opp;
+    possible |= S(E(possible)) & opp;
+    possible |= S(E(possible)) & opp;
+    possible |= S(E(possible)) & opp;
+    
+    moves |= S(E(possible)) & (~taken); 
+
+    // Gets all moves possible by playing diagonally left below 
+    // an enemy piece
+    possible = S(W(own)) & opp;
+    possible |= S(W(possible)) & opp;
+    possible |= S(W(possible)) & opp;
+    possible |= S(W(possible)) & opp;
+    possible |= S(W(possible)) & opp;
+    
+    moves |= S(W(possible)) & (~taken);
+    
+    /* FOR DEBUGGING 
+    for (unsigned int i = 0; i < taken.size(); ++i) {
+	if (taken.test(i)) {
+	    if (black.test(i)) {
+		cerr << "B";
+	    }
+	    else {
+		cerr << "W";
+	    }
+	}
+	else {
+	    cerr << "0";
+	}
+	if (i % 8 == 7) {
+	    cerr << endl;
+	}
+    }
+    cerr << endl;
+
+    for (unsigned int i = 0; i < moves.size(); ++i) {
+	if (moves.test(i)) {
+	    cerr << "1";
+	}
+	else {
+	    cerr << "0";
+	}
+	if (i % 8 == 7) {
+	    cerr << endl;
+	}
+    }
+    cerr << endl;
+    */
+
+    // Populates the vector of possible moves with the moves
+    // that were obtained through bit manipulations.
+    for (unsigned int i = 0; i < moves.size(); ++i) {
+	if (moves.test(i)) {
+	    int x = i % 8;
+	    int y = i / 8;
+	    Move *next = new Move(x, y);
+	    possibleMoves.push_back(next);
+	}
+    }
+    cerr << endl;
+    
+    
 }
 
 /*

@@ -10,7 +10,7 @@ class Board {
 private:
     bitset<64> black;
     bitset<64> taken;    
-       
+
     bool occupied(int x, int y);
     bool get(Side side, int x, int y);
     void set(Side side, int x, int y);
@@ -29,6 +29,8 @@ public:
     int countBlack();
     int countWhite();
 
+    void getPossibleMoves(Side side, vector<Move *>& possibleMoves);
+    
     void setBoard(char data[]);
 };
 

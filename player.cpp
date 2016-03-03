@@ -46,5 +46,23 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
 	_board->doMove(opponentsMove, _opponentSide);
     }
     
+    Move *m = findFirstMove();
+    _board->doMove(m, _side);
+    return m;
+}
+
+/*
+ * Returns the first available move that the AI finds.
+ */
+Move *Player::findFirstMove() {
+    vector<Move *> moves;
+    _board->getPossibleMoves(_side, moves);
+    
+    // Returns the first move in the list
+    if (!moves.empty()) {
+	return moves.back();
+    }
+    
+    // No valid moves
     return NULL;
 }
