@@ -14,11 +14,11 @@ bitset<64> S(bitset<64> x) {
 }
 
 bitset<64> W(bitset<64> x) {
-    return (x & bitset<64>(0x7f7f7f7f7f7f7f7f)) << 1;
+    return (x & bitset<64>(string("011111110111111101111111011111110111111101111110111111101111111"))) << 1;
 }
 
 bitset<64> E(bitset<64> x) {
-    return (x & bitset<64>(0xfefefefefefefefe)) >> 1;
+    return (x & bitset<64>(string("1111111011111110111111101111111011111110111111101111111011111110"))) >> 1;
 }
 
 /*
