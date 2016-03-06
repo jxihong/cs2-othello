@@ -13,14 +13,15 @@ private:
     Board* _board;
     Side _side;
     Side _opponentSide;
-
+    
+    unordered_map<string, int> _table; // transposition table
+   
     Move *findFirstMove();
     Move *findMinimaxMove(int depth);
-    
-    int evaluate(Board *b);
-    
     pair<int, Move*> minimaxHelper(int depth, Board *b, Side s);
     
+    void computeOpening();
+    int evaluate(Board *b);
 public:
     Player(Side side);
     ~Player();

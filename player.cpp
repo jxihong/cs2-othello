@@ -16,12 +16,15 @@ Player::Player(Side side) : _side(side) {
      */
     _board = new Board();
     _opponentSide = (_side == BLACK) ? (WHITE) : (BLACK);
+
+    this->computeOpening();
 }
 
 /*
  * Destructor for the player.
  */
 Player::~Player() {
+    _table.clear();
     delete _board;
 }
 
@@ -47,9 +50,9 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     }
     
     Move *m = (testingMinimax) ? 
-	(this->findMinimaxMove(2)) : (this->findMinimaxMove(5));
+	(this->findMinimaxMove(2)) : (this->findMinimaxMove(6));
     _board->doMove(m, _side);
-
+    
     return m;
 }
 
@@ -80,22 +83,6 @@ Move *Player::findMinimaxMove(int depth) {
     delete copyboard;
     
     return best.second;
-}
-
-/*
- * Heuristic that evaluates the score of a given board
- * configuration.
- */ 
-int Player::evaluate(Board *b) {
-    if (testingMinimax) {
-	return b->count(_side) - b->count(_opponentSide);
-    }
-    else {
-	/* TODO: Update the heuristic with a better one that takes into
-	 * account position of pieces, frontier, stability, etc.
-	 */
-	return b->count(_side) - b->count(_opponentSide); 
-    }
 }
 
 /*
@@ -144,3 +131,86 @@ pair<int, Move*> Player::minimaxHelper(int depth, Board *b, Side s) {
     }
     return make_pair(best_score, best);
 }
+
+/*
+ * Heuristic that evaluates the score of a given board
+ * configuration.
+ */ 
+int Player::evaluate(Board *b) {
+    if (testingMinimax) {
+	return b->count(_side) - b->count(_opponentSide);
+    }
+    else {
+	// Compute the bitsets for ai and opponent sides, and converts
+	// to a 64-bit integer
+	unsigned long long ai_side, opp_side;
+	if (_side == BLACK) {
+	    ai_side = b->black.to_ullong();
+	    opp_side = (~(b->black) & (b->taken)).to_ullong();
+	}
+	else {
+	    ai_side = (~(b->black) & (b->taken)).to_ullong();
+	    opp_side = b->black.to_ullong();
+	}
+	
+	// Hash value is simply concatenation of 2 integers
+	string hash = to_string(ai_side) + ", " + to_string(opp_side);
+	if (_table.find(hash) != _table.end()) {
+	    return _table[hash];
+	}
+	else {
+	    /* TODO: Update the heuristic with a better one that takes into
+	     * account position of pieces, frontier, stability, etc.
+	     */
+	    int score = b->count(_side) - b->count(_opponentSide);
+	    
+	    // Keeps transposition table at fixed size
+	    if (_table.size() >= 10000) {
+		// Removes the first key, since it is probably the furthest 
+		// away from the current game state
+		_table.erase(_table.begin());
+	    }
+	    _table[hash] = score;
+	    return score;
+	} 
+    }
+}
+
+/*
+ * Stores the score of positions early in the game so they can be 
+ * looked up quickly.
+ */
+void Player::computeOpening() {
+    vector<pair<Side, Board *> > positions;
+    positions.push_back(make_pair(_side, _board->copy()));
+    
+    // Computes initial 10000 board positions, and stores their 
+    // score in the transposition table
+    while (_table.size() < 10000) {
+	pair<Side, Board *> curr = positions.front();
+	this->evaluate(curr.second);
+	
+	positions.erase(positions.begin());
+
+	vector<Move *> moves;
+	curr.second->getPossibleMoves(curr.first, moves);
+	
+	for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
+	    Board *nextBoard = curr.second->copy();
+	    nextBoard->doMove(*it, curr.first);
+	    
+	    Side next = (curr.first == BLACK) ? (WHITE) : (BLACK);
+	    positions.push_back(make_pair(next, nextBoard));
+	}
+	
+	delete curr.second;
+    }
+    
+    while (!positions.empty()) {
+	pair<Side, Board *> it = positions.back();
+	positions.pop_back();
+	delete it.second;
+    }
+	
+}
+

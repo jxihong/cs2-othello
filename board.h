@@ -6,7 +6,7 @@
 using namespace std;
 
 class Board {
-   
+    friend class Player;
 private:
     bitset<64> black;
     bitset<64> taken;    
