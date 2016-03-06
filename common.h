@@ -2,7 +2,10 @@
 #define __COMMON_H__
 
 #include <vector>
+#include <string>
+#include <utility>
 #include <iostream>
+#include <algorithm>
 
 enum Side { 
     WHITE, BLACK

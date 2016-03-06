@@ -46,8 +46,10 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
 	_board->doMove(opponentsMove, _opponentSide);
     }
     
-    Move *m = findFirstMove();
+    Move *m = (testingMinimax) ? 
+	(this->findMinimaxMove(2)) : (this->findMinimaxMove(5));
     _board->doMove(m, _side);
+
     return m;
 }
 
@@ -60,9 +62,85 @@ Move *Player::findFirstMove() {
     
     // Returns the first move in the list
     if (!moves.empty()) {
-	return moves.back();
+	return moves.front();
     }
     
     // No valid moves
     return NULL;
+}
+
+/*
+ * Uses the minimax algorithm to look for the best move
+ */
+Move *Player::findMinimaxMove(int depth) {
+    Board *copyboard = _board->copy();
+   
+    // Calls helper function that returns best (score, move) pair 
+    pair<int, Move *> best = this->minimaxHelper(depth, copyboard, _side);
+    delete copyboard;
+    
+    return best.second;
+}
+
+/*
+ * Heuristic that evaluates the score of a given board
+ * configuration.
+ */ 
+int Player::evaluate(Board *b) {
+    if (testingMinimax) {
+	return b->count(_side) - b->count(_opponentSide);
+    }
+    else {
+	/* TODO: Update the heuristic with a better one that takes into
+	 * account position of pieces, frontier, stability, etc.
+	 */
+	return b->count(_side) - b->count(_opponentSide); 
+    }
+}
+
+/*
+ * Helper function that recursively searches for the minimax
+ * solution. Returns a pair including the optimized score and
+ * the best move.
+ */
+pair<int, Move*> Player::minimaxHelper(int depth, Board *b, Side s) {
+    int best_score = (s == _side) ? (INT_MIN) : (INT_MAX);
+    Move *best = NULL;
+    
+    // Base Case: Just evaluate board
+    if (depth == 0) {
+	return make_pair(this->evaluate(b), best);
+    }
+    else {
+	vector<Move *> moves;
+	b->getPossibleMoves(s, moves);
+
+	// There are no more possible moves
+	if (moves.empty()) {
+	    return make_pair(this->evaluate(b), best);
+	}
+	for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
+	    Board *nextBoard = b->copy();
+	    
+	    nextBoard->doMove(*it, s);
+	    if (s == _side) {
+		// Wants to maximize the possible score
+		pair<int, Move*> score = this->minimaxHelper(depth - 1, nextBoard, _opponentSide);
+		if (score.first >= best_score) {
+		    best_score = score.first;
+		    best = *it;
+		}
+	    }
+	    else {
+		// Opponent wants to minimize the possible score
+		pair<int, Move*> score = this->minimaxHelper(depth - 1, nextBoard, _side);
+		if (score.first <= best_score) {
+		    best_score = score.first;
+		    best = *it;
+		}
+	    }
+	    delete nextBoard;
+	}
+    }
+    return make_pair(best_score, best);
 }
