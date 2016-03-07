@@ -172,12 +172,12 @@ int Player::evaluate(Board *b) {
         score += (b->black).count();
         score += EDGEWEIGHT * (b->black & EDGES).count();
         score += CORNERWEIGHT * (b->black & CORNERS).count();
-        score -= CORNERWEIGHT * (b->black & NEXTTOCORNERS).count();
+        score -= CORNERWEIGHT/4 * (b->black & NEXTTOCORNERS).count();
         
         score -= white.count();
         score -= EDGEWEIGHT * (white & EDGES).count();
         score -= CORNERWEIGHT * (white & CORNERS).count();
-        score += CORNERWEIGHT * (white & NEXTTOCORNERS).count();
+        score += CORNERWEIGHT/4 * (white & NEXTTOCORNERS).count();
         
         if (_side == WHITE) {
             score *= -1;
