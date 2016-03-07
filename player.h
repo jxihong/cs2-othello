@@ -7,6 +7,8 @@
 #include "board.h"
 
 #define MINIMAXDEPTH 6
+#define EDGEWEIGHT 2
+#define CORNERWEIGHT 8
 
 using namespace std;
 

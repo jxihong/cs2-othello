@@ -1,5 +1,9 @@
 #include "player.h"
 
+bitset<64> EDGES = bitset<64>(0xff818181818181ffULL);
+bitset<64> CORNERS = bitset<64>(0x8100000000000081ULL);
+bitset<64> NEXTTOCORNERS = bitset<64>(0x4281000000008142ULL);
+
 /*
  * Constructor for the player; initialize everything here. The side your AI is
  * on (BLACK or WHITE) is passed in as "side". The constructor must finish 
@@ -18,6 +22,7 @@ Player::Player(Side side) : _side(side) {
     _opponentSide = (_side == BLACK) ? (WHITE) : (BLACK);
 
     this->computeOpening();
+    std::cerr << "Done Initialization" << std::endl;
 }
 
 /*
@@ -162,7 +167,21 @@ int Player::evaluate(Board *b) {
 	    /* TODO: Update the heuristic with a better one that takes into
 	     * account position of pieces, frontier, stability, etc.
 	     */
-	    int score = b->count(_side) - b->count(_opponentSide);
+	    int score = 0;
+        bitset<64> white = (b->taken & ~(b->black));
+        score += (b->black).count();
+        score += EDGEWEIGHT * (b->black & EDGES).count();
+        score += CORNERWEIGHT * (b->black & CORNERS).count();
+        score -= CORNERWEIGHT * (b->black & NEXTTOCORNERS).count();
+        
+        score -= white.count();
+        score -= EDGEWEIGHT * (white & EDGES).count();
+        score -= CORNERWEIGHT * (white & CORNERS).count();
+        score += CORNERWEIGHT * (white & NEXTTOCORNERS).count();
+        
+        if (_side == WHITE) {
+            score *= -1;
+        }
 	    
 	    // Keeps transposition table at fixed size
 	    if (_table.size() >= 10000) {
