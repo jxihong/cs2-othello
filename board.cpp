@@ -1,5 +1,8 @@
 #include "board.h"
 
+bitset<64> WEST = bitset<64>(0x7f7f7f7f7f7f7f7fULL);
+bitset<64> EAST = bitset<64>(0xfefefefefefefefeULL);
+
 /*
  * Shows valid positions to play in each direction: North, 
  * South, East, or West. Treats board configuration as a 
@@ -15,11 +18,11 @@ bitset<64> S(bitset<64> x) {
 
 // Have to use strings because 64 bits is larger than long integers.
 bitset<64> W(bitset<64> x) {
-    return (x & bitset<64>(0x7f7f7f7f7f7f7f7fULL)) << 1;
+    return (x & WEST) << 1;
 }
 
 bitset<64> E(bitset<64> x) {
-    return (x & bitset<64>(0xfefefefefefefefeULL)) >> 1;
+    return (x & EAST) >> 1;
 }
 
 /*
@@ -309,10 +312,7 @@ void Board::getPossibleMoves(Side side, vector<Move *>& possibleMoves) {
 	    Move *next = new Move(x, y);
 	    possibleMoves.push_back(next);
 	}
-    }
-    cerr << endl;
-    
-    
+    }    
 }
 
 /*

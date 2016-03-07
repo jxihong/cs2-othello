@@ -50,7 +50,7 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     }
     
     Move *m = (testingMinimax) ? 
-	(this->findMinimaxMove(2)) : (this->findMinimaxMove(6));
+	(this->findMinimaxMove(2)) : (this->findMinimaxMove(MINIMAXDEPTH));
     _board->doMove(m, _side);
     
     return m;
@@ -77,7 +77,7 @@ Move *Player::findFirstMove() {
  */
 Move *Player::findMinimaxMove(int depth) {
     Board *copyboard = _board->copy();
-   
+
     // Calls helper function that returns best (score, move) pair 
     pair<int, Move *> best = this->minimaxHelper(depth, copyboard, _side);
     delete copyboard;
@@ -194,12 +194,13 @@ void Player::computeOpening() {
 
 	vector<Move *> moves;
 	curr.second->getPossibleMoves(curr.first, moves);
+    Side next = (curr.first == BLACK) ? (WHITE) : (BLACK);
+
 	
 	for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
 	    Board *nextBoard = curr.second->copy();
 	    nextBoard->doMove(*it, curr.first);
 	    
-	    Side next = (curr.first == BLACK) ? (WHITE) : (BLACK);
 	    positions.push_back(make_pair(next, nextBoard));
 	}
 	

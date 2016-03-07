@@ -5,6 +5,9 @@
 
 #include "common.h"
 #include "board.h"
+
+#define MINIMAXDEPTH 6
+
 using namespace std;
 
 class Player {
