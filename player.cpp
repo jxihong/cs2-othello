@@ -59,15 +59,22 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     // use up as much time as safely possible.
     if (msLeft > 0) {
 	clock_t start = clock();
-	double time_allowed = (msLeft) / (100);
+
+	// 500 may be an overestimate. Can optimize later
+	double time_allowed = (msLeft) / (500);
 	
 	int depth = MINIMAXDEPTH;
+
+	// While there is still time left, it will compute one depth further. While
+	// it repeats some calculations, that fact that we have a transposition table
+	// should minimize the time wasted. 
 	while ( (double)(clock() - start) / (CLOCKS_PER_SEC / 1000) < time_allowed) {
 	    m = (testingMinimax) ? 
-		(this->findMinimaxMove(2)) : (this->findMinimaxMove(depth));
-	    ++depth;
+		(this->findMinimaxMove(2)) : (this->findMinimaxMove(depth++));
 	}
-	//cerr << depth << endl;
+	/* FOR DEBUGGING
+	cerr << depth << endl;
+	*/
     }
     else {
 	m = (testingMinimax) ? 

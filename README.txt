@@ -1,3 +1,12 @@
+Contributions
+--------------------------------------------
+Joey:
+- Generate all possible moves using bitboard
+- Implemented minimax/alpha-beta pruning
+- Added transposition table/calculate initial opening moves
+- Added iterative deepening
+
+
 Generating Possible Moves
 ----------------------------------------------
 We thought that it would be quicker to use the actual bitboard to 
@@ -25,7 +34,7 @@ of the game.
 Minimax
 -----------------------------------------------
 We implemented the minimax algorithm with alpha-beta pruning. With pruning, 
-we can search much farther than BetterPlayer. 
+we can search much farther than BetterPlayer can. 
 
 We also used iterative deepening to search as far down the minimax tree as
 possible while staying safely within the time bounds. This allowed the AI to
