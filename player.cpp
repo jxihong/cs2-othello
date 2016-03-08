@@ -53,11 +53,27 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     if (opponentsMove) {
 	_board->doMove(opponentsMove, _opponentSide);
     }
+    Move *m = NULL;
     
-    Move *m = (testingMinimax) ? 
-	(this->findMinimaxMove(2)) : (this->findMinimaxMove(MINIMAXDEPTH));
+    // If a time limit is specified, the AI will do iterative deepening to 
+    // use up as much time as safely possible.
+    if (msLeft > 0) {
+	clock_t start = clock();
+	double time_allowed = (msLeft) / (100);
+	
+	int depth = MINIMAXDEPTH;
+	while ( (double)(clock() - start) / (CLOCKS_PER_SEC / 1000) < time_allowed) {
+	    m = (testingMinimax) ? 
+		(this->findMinimaxMove(2)) : (this->findMinimaxMove(depth));
+	    ++depth;
+	}
+	//cerr << depth << endl;
+    }
+    else {
+	m = (testingMinimax) ? 
+	    (this->findMinimaxMove(2)) : (this->findMinimaxMove(MINIMAXDEPTH));
+    }
     _board->doMove(m, _side);
-    
     return m;
 }
 
@@ -81,22 +97,25 @@ Move *Player::findFirstMove() {
  * Uses the minimax algorithm to look for the best move
  */
 Move *Player::findMinimaxMove(int depth) {
-    Board *copyboard = _board->copy();
-
-    // Calls helper function that returns best (score, move) pair 
-    pair<int, Move *> best = this->minimaxHelper(depth, copyboard, _side);
-    delete copyboard;
+    int alpha = INT_MIN;
+    int beta = INT_MAX;
     
+    Board *copyboard = _board->copy();
+    
+    // Calls helper function that returns best (score, move) pair 
+    pair<int, Move *> best = this->minimaxHelper(depth, copyboard, _side, alpha, beta);
+    
+    delete copyboard;
     return best.second;
+    
 }
 
 /*
  * Helper function that recursively searches for the minimax
- * solution. Returns a pair including the optimized score and
- * the best move.
+ * solution. Returns a pair including the optimized score alpha/beta
+ * and the best move.
  */
-pair<int, Move*> Player::minimaxHelper(int depth, Board *b, Side s) {
-    int best_score = (s == _side) ? (INT_MIN) : (INT_MAX);
+pair<int, Move*> Player::minimaxHelper(int depth, Board *b, Side s, int alpha, int beta) {
     Move *best = NULL;
     
     // Base Case: Just evaluate board
@@ -111,30 +130,47 @@ pair<int, Move*> Player::minimaxHelper(int depth, Board *b, Side s) {
 	if (moves.empty()) {
 	    return make_pair(this->evaluate(b), best);
 	}
-	for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
-	    Board *nextBoard = b->copy();
-	    
-	    nextBoard->doMove(*it, s);
-	    if (s == _side) {
+	if (s == _side) {
+	    alpha = INT_MIN;
+	    for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
+		Board *nextBoard = b->copy();
+		nextBoard->doMove(*it, s);
+		
 		// Wants to maximize the possible score
-		pair<int, Move*> score = this->minimaxHelper(depth - 1, nextBoard, _opponentSide);
-		if (score.first >= best_score) {
-		    best_score = score.first;
+		pair<int, Move*> score = this->minimaxHelper(depth - 1, nextBoard, 
+							     _opponentSide, alpha, beta);
+		if (score.first >= alpha) {
+		    alpha = score.first;
 		    best = *it;
 		}
+		if (beta <= alpha) {
+		    break;
+		}
+		delete nextBoard;
 	    }
-	    else {
+	    return make_pair(alpha, best);
+	}
+	else {
+	    beta = INT_MAX;
+	    for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
+		Board *nextBoard = b->copy();
+		nextBoard->doMove(*it, s);
+		
 		// Opponent wants to minimize the possible score
-		pair<int, Move*> score = this->minimaxHelper(depth - 1, nextBoard, _side);
-		if (score.first <= best_score) {
-		    best_score = score.first;
+		pair<int, Move*> score = this->minimaxHelper(depth - 1, nextBoard, 
+							     _side, alpha, beta);
+		if (score.first <= beta) {
+		    beta = score.first;
 		    best = *it;
 		}
+		if (beta <= alpha) {
+		    break;
+		}
+		delete nextBoard;
 	    }
-	    delete nextBoard;
+	    return make_pair(beta, best);
 	}
     }
-    return make_pair(best_score, best);
 }
 
 /*
@@ -148,18 +184,18 @@ int Player::evaluate(Board *b) {
     else {
 	// Compute the bitsets for ai and opponent sides, and converts
 	// to a 64-bit integer
-	unsigned long long ai_side, opp_side;
+	unsigned long long ai_side, total;
 	if (_side == BLACK) {
-	    ai_side = b->black.to_ullong();
-	    opp_side = (~(b->black) & (b->taken)).to_ullong();
+	    ai_side = (b->black).to_ullong();
+	    total = (b->taken).to_ullong();
 	}
 	else {
 	    ai_side = (~(b->black) & (b->taken)).to_ullong();
-	    opp_side = b->black.to_ullong();
+	    total = (b->taken).to_ullong();
 	}
 	
 	// Hash value is simply concatenation of 2 integers
-	string hash = to_string(ai_side) + ", " + to_string(opp_side);
+	string hash = to_string(ai_side) + ", " + to_string(total);
 	if (_table.find(hash) != _table.end()) {
 	    return _table[hash];
 	}
@@ -168,23 +204,24 @@ int Player::evaluate(Board *b) {
 	     * account position of pieces, frontier, stability, etc.
 	     */
 	    int score = 0;
-        bitset<64> white = (b->taken & ~(b->black));
-        score += (b->black).count();
-        score += EDGEWEIGHT * (b->black & EDGES).count();
-        score += CORNERWEIGHT * (b->black & CORNERS).count();
-        score -= CORNERWEIGHT/4 * (b->black & NEXTTOCORNERS).count();
-        
-        score -= white.count();
-        score -= EDGEWEIGHT * (white & EDGES).count();
-        score -= CORNERWEIGHT * (white & CORNERS).count();
-        score += CORNERWEIGHT/4 * (white & NEXTTOCORNERS).count();
-        
-        if (_side == WHITE) {
-            score *= -1;
-        }
+
+	    bitset<64> white = (b->taken & ~(b->black));
+	    score += (b->black).count();
+	    score += EDGEWEIGHT * (b->black & EDGES).count();
+	    score += CORNERWEIGHT * (b->black & CORNERS).count();
+	    score -= CORNERWEIGHT/4 * (b->black & NEXTTOCORNERS).count();
+	    
+	    score -= white.count();
+	    score -= EDGEWEIGHT * (white & EDGES).count();
+	    score -= CORNERWEIGHT * (white & CORNERS).count();
+	    score += CORNERWEIGHT/4 * (white & NEXTTOCORNERS).count();
+	    
+	    if (_side == WHITE) {
+		score *= -1;
+	    }
 	    
 	    // Keeps transposition table at fixed size
-	    if (_table.size() >= 10000) {
+	    if (_table.size() >= 100000) {
 		// Removes the first key, since it is probably the furthest 
 		// away from the current game state
 		_table.erase(_table.begin());
@@ -203,9 +240,9 @@ void Player::computeOpening() {
     vector<pair<Side, Board *> > positions;
     positions.push_back(make_pair(_side, _board->copy()));
     
-    // Computes initial 10000 board positions, and stores their 
+    // Computes initial 25000 board positions, and stores their 
     // score in the transposition table
-    while (_table.size() < 10000) {
+    while (_table.size() < 25000) {
 	pair<Side, Board *> curr = positions.front();
 	this->evaluate(curr.second);
 	

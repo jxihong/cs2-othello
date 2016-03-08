@@ -1,5 +1,5 @@
 CC          = g++
-CFLAGS      = -Wall -ansi -pedantic -ggdb -std=c++11
+CFLAGS      = -Wall -ansi -pedantic -O3 -std=c++11 
 OBJS        = player.o board.o
 PLAYERNAME  = RunningCode
 

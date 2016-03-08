@@ -6,7 +6,7 @@
 #include "common.h"
 #include "board.h"
 
-#define MINIMAXDEPTH 6
+#define MINIMAXDEPTH 8
 #define EDGEWEIGHT 2
 #define CORNERWEIGHT 16
 
@@ -19,11 +19,12 @@ private:
     Side _side;
     Side _opponentSide;
     
-    unordered_map<string, int> _table; // transposition table
-   
+    // Transposition table
+    unordered_map<string, int> _table;
+    
     Move *findFirstMove();
     Move *findMinimaxMove(int depth);
-    pair<int, Move*> minimaxHelper(int depth, Board *b, Side s);
+    pair<int, Move*> minimaxHelper(int depth, Board *b, Side s, int alpha, int beta);
     
     void computeOpening();
     int evaluate(Board *b);
