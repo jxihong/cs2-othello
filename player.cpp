@@ -54,7 +54,6 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
 	_board->doMove(opponentsMove, _opponentSide);
     }
     Move *m = NULL;
-    
     // If a time limit is specified, the AI will do iterative deepening to 
     // use up as much time as safely possible.
     if (msLeft > 0) {
@@ -107,14 +106,45 @@ Move *Player::findMinimaxMove(int depth) {
     int alpha = INT_MIN;
     int beta = INT_MAX;
     
-    Board *copyboard = _board->copy();
+    vector<Move *> moves;
+    _board->getPossibleMoves(_side, moves);
     
-    // Calls helper function that returns best (score, move) pair 
-    pair<int, Move *> best = this->minimaxHelper(depth, copyboard, _side, alpha, beta);
+    Move *best = NULL; // Stores best move
     
-    delete copyboard;
-    return best.second;
+    for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
+	Board *nextBoard = _board->copy();
+	nextBoard->doMove(*it, _side);
+	
+	// Calls helper function that returns best score given move *it 
+	int score = this->minimaxHelper(depth - 1, nextBoard, _opponentSide, alpha, beta);
+	if (score >= alpha) {
+	    alpha = score;
+	    best = *it;
+	}
+	if (*it != best) {
+	    delete *it;
+	}
+	delete nextBoard;
+    }
     
+    /* FOR THREADING
+    vector<future<int> > futures;
+    
+    vector<Board *> boards(moves.size(), _board->copy());
+    int i = 0;
+    for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
+	boards[i]->doMove(*it, _side);
+	
+	futures.push_back(async(&Player::minimaxHelper, this, depth - 1, boards[i++],
+				_opponentSide, alpha, beta));
+    }
+    
+    for (vector<future<int> >::iterator it = futures.begin(); it != futures.end(); ++it) {
+	cerr <<  "Score: " << it->get() << endl;
+    }
+    */
+    
+    return best;
 }
 
 /*
@@ -122,12 +152,10 @@ Move *Player::findMinimaxMove(int depth) {
  * solution. Returns a pair including the optimized score alpha/beta
  * and the best move.
  */
-pair<int, Move*> Player::minimaxHelper(int depth, Board *b, Side s, int alpha, int beta) {
-    Move *best = NULL;
-    
+int Player::minimaxHelper(int depth, Board *b, Side s, int alpha, int beta) {
     // Base Case: Just evaluate board
     if (depth == 0) {
-	return make_pair(this->evaluate(b), best);
+	return this->evaluate(b);
     }
     else {
 	vector<Move *> moves;
@@ -135,7 +163,7 @@ pair<int, Move*> Player::minimaxHelper(int depth, Board *b, Side s, int alpha, i
 
 	// There are no more possible moves
 	if (moves.empty()) {
-	    return make_pair(this->evaluate(b), best);
+	    return this->evaluate(b);
 	}
 	if (s == _side) {
 	    alpha = INT_MIN;
@@ -144,18 +172,16 @@ pair<int, Move*> Player::minimaxHelper(int depth, Board *b, Side s, int alpha, i
 		nextBoard->doMove(*it, s);
 		
 		// Wants to maximize the possible score
-		pair<int, Move*> score = this->minimaxHelper(depth - 1, nextBoard, 
-							     _opponentSide, alpha, beta);
-		if (score.first >= alpha) {
-		    alpha = score.first;
-		    best = *it;
-		}
+		int score = this->minimaxHelper(depth - 1, nextBoard, _opponentSide, alpha, beta);
+		alpha = max(alpha, score);
+		
 		if (beta <= alpha) {
 		    break;
 		}
+		delete *it;
 		delete nextBoard;
 	    }
-	    return make_pair(alpha, best);
+	    return alpha;
 	}
 	else {
 	    beta = INT_MAX;
@@ -164,18 +190,16 @@ pair<int, Move*> Player::minimaxHelper(int depth, Board *b, Side s, int alpha, i
 		nextBoard->doMove(*it, s);
 		
 		// Opponent wants to minimize the possible score
-		pair<int, Move*> score = this->minimaxHelper(depth - 1, nextBoard, 
-							     _side, alpha, beta);
-		if (score.first <= beta) {
-		    beta = score.first;
-		    best = *it;
-		}
+		int score = this->minimaxHelper(depth - 1, nextBoard, _side, alpha, beta);
+		beta = min(beta, score);
+		
 		if (beta <= alpha) {
 		    break;
 		}
+		delete *it;
 		delete nextBoard;
 	    }
-	    return make_pair(beta, best);
+	    return beta;
 	}
     }
 }

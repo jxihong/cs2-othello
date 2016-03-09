@@ -24,7 +24,7 @@ private:
     
     Move *findFirstMove();
     Move *findMinimaxMove(int depth);
-    pair<int, Move*> minimaxHelper(int depth, Board *b, Side s, int alpha, int beta);
+    int minimaxHelper(int depth, Board *b, Side s, int alpha, int beta);
     
     void computeOpening();
     int evaluate(Board *b);

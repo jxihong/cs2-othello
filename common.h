@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <future>
 #include <ctime>
 #include <utility>
 #include <iostream>
