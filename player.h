@@ -6,9 +6,10 @@
 #include "common.h"
 #include "board.h"
 
-#define MINIMAXDEPTH 8
+#define MINIMAXDEPTH 5
 #define EDGEWEIGHT 2
 #define CORNERWEIGHT 16
+#define MOBILITYWEIGHT 4
 
 using namespace std;
 

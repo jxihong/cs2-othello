@@ -2,7 +2,6 @@
 
 bitset<64> EDGES = bitset<64>(0xff818181818181ffULL);
 bitset<64> CORNERS = bitset<64>(0x8100000000000081ULL);
-bitset<64> NEXTTOCORNERS = bitset<64>(0x4281000000008142ULL);
 
 /*
  * Constructor for the player; initialize everything here. The side your AI is
@@ -231,25 +230,34 @@ int Player::evaluate(Board *b) {
 	    return _table[hash];
 	}
 	else {
-	    /* TODO: Update the heuristic with a better one that takes into
-	     * account position of pieces, frontier, stability, etc.
-	     */
 	    int score = 0;
-
-	    bitset<64> white = (b->taken & ~(b->black));
-	    score += (b->black).count();
-	    score += EDGEWEIGHT * (b->black & EDGES).count();
-	    score += CORNERWEIGHT * (b->black & CORNERS).count();
-	    score -= CORNERWEIGHT/4 * (b->black & NEXTTOCORNERS).count();
-	    
-	    score -= white.count();
-	    score -= EDGEWEIGHT * (white & EDGES).count();
-	    score -= CORNERWEIGHT * (white & CORNERS).count();
-	    score += CORNERWEIGHT/4 * (white & NEXTTOCORNERS).count();
-	    
-	    if (_side == WHITE) {
-		score *= -1;
-	    }
+        bitset<64> white = (b->taken & ~(b->black));
+        // Coin count
+        score += (b->black).count() - white.count();
+        
+        // Edges and corners
+        score += EDGEWEIGHT * (b->black & EDGES).count();
+        score += CORNERWEIGHT * (b->black & CORNERS).count();
+        score -= EDGEWEIGHT * (white & EDGES).count();
+        score -= CORNERWEIGHT * (white & CORNERS).count();
+        
+        // Mobility
+        vector<Move *> next_moves;
+        b->getPossibleMoves(BLACK, next_moves);
+        Move *to_delete;
+        while (!next_moves.empty()) {
+            to_delete = next_moves.back();
+            next_moves.pop_back();
+            delete to_delete;
+        }
+//        score += next_moves.size();
+//        next_moves.clear();
+//        b->getPossibleMoves(WHITE, next_moves);
+//        score -= next_moves.size();
+        
+        if (_side == WHITE) {
+            score *= -1;
+        }
 	    
 	    // Keeps transposition table at fixed size
 	    if (_table.size() >= 100000) {
