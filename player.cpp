@@ -59,9 +59,9 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     	clock_t start = clock();
 
     	// 500 may be an overestimate. Can optimize later
-    	double time_allowed = (msLeft) / (500);
+    	double time_allowed = (msLeft) / TIMESPLIT;
     	
-    	int depth = MINIMAXDEPTH;
+    	int depth = 2;
 
     	// While there is still time left, it will compute one depth further. While
     	// it repeats some calculations, that fact that we have a transposition table
