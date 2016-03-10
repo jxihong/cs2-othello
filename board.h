@@ -29,8 +29,7 @@ public:
     int countBlack();
     int countWhite();
 
-    void getPossibleMoves(Side side, vector<Move *>& possibleMoves);
-    
+    bitset<64> getPossibleMoves(Side side);
     void setBoard(char data[]);
 };
 
