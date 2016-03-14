@@ -9,6 +9,8 @@
 #define MINIMAXDEPTH 8
 #define EDGEWEIGHT 2
 #define CORNERWEIGHT 16
+#define MOBILITYWEIGHT 4
+#define TIMESPLIT 100
 
 using namespace std;
 

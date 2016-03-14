@@ -189,22 +189,18 @@ int Board::countWhite() {
 }
 
 /*
- * Generates all possible moves for a specific side. To avoid
- * return an entire vector, the vector to be filled is passed
- * in by reference as an argument.
+ * Generates all valid moves for a specific side, returning
+ * a bitset to optimize performance.
  */
-void Board::getPossibleMoves(Side side, vector<Move *>& possibleMoves) {
-    possibleMoves.clear(); // Makes sure vector is empty
-   
+bitset<64> Board::getPossibleMoves(Side side) {
     bitset<64> own;
     bitset<64> opp;
     if (side == BLACK) {
-	own = black;
-	opp = taken & (~black);
-    }
-    else {
-	own = taken & (~black);
-	opp = black;
+	    own = black;
+	    opp = taken & (~black);
+    } else {
+	    own = taken & (~black);
+	    opp = black;
     }
 
     bitset<64> moves(0x0);
@@ -212,28 +208,28 @@ void Board::getPossibleMoves(Side side, vector<Move *>& possibleMoves) {
     // Gets all moves possible by playing above an enemy piece
     bitset<64> possible = N(own) & opp;
     for (int i = 0; i <= 4; ++i) {
-	possible |= N(possible) & opp;
+    	possible |= N(possible) & opp;
     }
     moves |= N(possible) & (~taken);
     
     // Gets all moves possible by playing below an enemy piece
     possible = S(own) & opp;
     for (int i = 0; i <= 4; ++i) {
-	possible |= S(possible) & opp;
+	    possible |= S(possible) & opp;
     }
     moves |= S(possible) & (~taken);
     
     // Gets all moves possible by playing right of an enemy piece
     possible = E(own) & opp;
     for (int i = 0; i <= 4; ++i) {
-	possible |= E(possible) & opp;
+	    possible |= E(possible) & opp;
     }
     moves |= E(possible) & (~taken);
     
     // Gets all moves possible by playing left of an enemy piece
     possible = W(own) & opp;
     for (int i = 0; i <= 4; ++i) {
-	possible |= W(possible) & opp;
+	    possible |= W(possible) & opp;
     }
     moves |= W(possible) & (~taken);
     
@@ -241,7 +237,7 @@ void Board::getPossibleMoves(Side side, vector<Move *>& possibleMoves) {
     // an enemy piece
     possible = N(E(own)) & opp;
     for (int i = 0; i <= 4; ++i) {
-	possible |= N(E(possible)) & opp;
+	    possible |= N(E(possible)) & opp;
     }
 
     moves |= N(E(possible)) & (~taken);
@@ -250,7 +246,7 @@ void Board::getPossibleMoves(Side side, vector<Move *>& possibleMoves) {
     // an enemy piece
     possible = N(W(own)) & opp;
     for (int i = 0; i <= 4; ++i) {
-	possible |= N(W(possible)) & opp;
+	    possible |= N(W(possible)) & opp;
     }
     moves |= N(W(possible)) & (~taken);
     
@@ -258,7 +254,7 @@ void Board::getPossibleMoves(Side side, vector<Move *>& possibleMoves) {
     // an enemy piece
     possible = S(E(own)) & opp;
     for (int i = 0; i <= 4; ++i) {
-	possible |= S(E(possible)) & opp;
+	    possible |= S(E(possible)) & opp;
     }
     moves |= S(E(possible)) & (~taken); 
 
@@ -266,7 +262,7 @@ void Board::getPossibleMoves(Side side, vector<Move *>& possibleMoves) {
     // an enemy piece
     possible = S(W(own)) & opp;
     for (int i = 0; i <= 4; ++i) {
-	possible |= S(W(possible)) & opp;
+	    possible |= S(W(possible)) & opp;
     }
     moves |= S(W(possible)) & (~taken);
     
@@ -302,17 +298,7 @@ void Board::getPossibleMoves(Side side, vector<Move *>& possibleMoves) {
     }
     cerr << endl;
     */
-    
-    // Populates the vector of possible moves with the moves
-    // that were obtained through bit manipulations.
-    for (unsigned int i = 0; i < moves.size(); ++i) {
-	if (moves.test(i)) {
-	    int x = i % 8;
-	    int y = i / 8;
-	    Move *next = new Move(x, y);
-	    possibleMoves.push_back(next);
-	}
-    }    
+    return moves;
 }
 
 /*

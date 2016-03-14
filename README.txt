@@ -6,6 +6,11 @@ Joey:
 - Added transposition table/calculate initial opening moves
 - Added iterative deepening
 
+Ethan:
+- Debugging bitboard algorithms
+- Implemented and improved heuristics
+- Optimized performance on findBestMove using bitboards
+
 
 Generating Possible Moves
 ----------------------------------------------
@@ -40,3 +45,14 @@ We also used iterative deepening to search as far down the minimax tree as
 possible while staying safely within the time bounds. This allowed the AI to
 look many moves further ahead towards the endgame, where the minimax tree 
 was easy to compute.
+
+Heuristics
+-----------------------------------------------
+We used a combination of heuristics to evaluate board states.
+- Coin count: the number of tokens for our side, minus those of the other
+- Corners and edges: edges (and corners in particular) are particularly 
+	strategic squares to have, and thus get weighted extra
+- Mobility: maximize the number of possible moves for us, minus the 
+	number of possible moves for the opponent
+
+https://kartikkukreja.wordpress.com/2013/03/30/heuristic-function-for-reversiothello/

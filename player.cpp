@@ -2,7 +2,6 @@
 
 bitset<64> EDGES = bitset<64>(0xff818181818181ffULL);
 bitset<64> CORNERS = bitset<64>(0x8100000000000081ULL);
-bitset<64> NEXTTOCORNERS = bitset<64>(0x4281000000008142ULL);
 
 /*
  * Constructor for the player; initialize everything here. The side your AI is
@@ -57,27 +56,26 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     // If a time limit is specified, the AI will do iterative deepening to 
     // use up as much time as safely possible.
     if (msLeft > 0) {
-	clock_t start = clock();
+    	clock_t start = clock();
 
-	// 500 may be an overestimate. Can optimize later
-	double time_allowed = (msLeft) / (500);
-	
-	int depth = MINIMAXDEPTH;
+    	// 500 may be an overestimate. Can optimize later
+    	double time_allowed = (msLeft) / TIMESPLIT;
+    	
+    	int depth = 2;
 
-	// While there is still time left, it will compute one depth further. While
-	// it repeats some calculations, that fact that we have a transposition table
-	// should minimize the time wasted. 
-	while ( (double)(clock() - start) / (CLOCKS_PER_SEC / 1000) < time_allowed) {
-	    m = (testingMinimax) ? 
-		(this->findMinimaxMove(2)) : (this->findMinimaxMove(depth++));
-	}
-	/* FOR DEBUGGING
-	cerr << depth << endl;
-	*/
-    }
-    else {
-	m = (testingMinimax) ? 
-	    (this->findMinimaxMove(2)) : (this->findMinimaxMove(MINIMAXDEPTH));
+    	// While there is still time left, it will compute one depth further. While
+    	// it repeats some calculations, that fact that we have a transposition table
+    	// should minimize the time wasted. 
+    	while ( (double)(clock() - start) / (CLOCKS_PER_SEC / 1000) < time_allowed) {
+    	    m = (testingMinimax) ? 
+    		(this->findMinimaxMove(2)) : (this->findMinimaxMove(depth++));
+    	}
+    	/* FOR DEBUGGING
+    	std::cerr << depth << std::endl;
+    	*/
+    } else {
+    	m = (testingMinimax) ? 
+    	    (this->findMinimaxMove(2)) : (this->findMinimaxMove(MINIMAXDEPTH));
     }
     _board->doMove(m, _side);
     return m;
@@ -87,15 +85,14 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
  * Returns the first available move that the AI finds.
  */
 Move *Player::findFirstMove() {
-    vector<Move *> moves;
-    _board->getPossibleMoves(_side, moves);
-    
-    // Returns the first move in the list
-    if (!moves.empty()) {
-	return moves.front();
+    bitset<64> moves = _board->getPossibleMoves(_side);
+    if (moves.any()) {
+        for (int i = 0; i < 64; i++) {
+            if (moves.test(i)) {
+                return new Move(i % 8, i / 8);
+            }
+        }
     }
-    
-    // No valid moves
     return NULL;
 }
 
@@ -106,44 +103,28 @@ Move *Player::findMinimaxMove(int depth) {
     int alpha = INT_MIN;
     int beta = INT_MAX;
     
-    vector<Move *> moves;
-    _board->getPossibleMoves(_side, moves);
+    bitset<64> moves = _board->getPossibleMoves(_side);
     
-    Move *best = NULL; // Stores best move
+    Move *best = new Move(0,0); // Stores best move
+    Move current_move = Move(0,0);
+    Board *next_board;
+    int score;
     
-    for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
-	Board *nextBoard = _board->copy();
-	nextBoard->doMove(*it, _side);
-	
-	// Calls helper function that returns best score given move *it 
-	int score = this->minimaxHelper(depth - 1, nextBoard, _opponentSide, alpha, beta);
-	if (score >= alpha) {
-	    alpha = score;
-	    best = *it;
-	}
-	if (*it != best) {
-	    delete *it;
-	}
-	delete nextBoard;
+    for (int i = 0; i < 64; i++) {
+        if (moves.test(i)) {
+            current_move = Move(i % 8, i / 8);
+            next_board = _board->copy();
+            next_board->doMove(&current_move, _side);
+            
+            score = this->minimaxHelper(depth - 1, next_board, _opponentSide, alpha, beta);
+            if (score >= alpha) {
+                alpha = score;
+                best->setX(current_move.getX());
+                best->setY(current_move.getY());
+            }
+            
+        }
     }
-    
-    /* FOR THREADING
-    vector<future<int> > futures;
-    
-    vector<Board *> boards(moves.size(), _board->copy());
-    int i = 0;
-    for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
-	boards[i]->doMove(*it, _side);
-	
-	futures.push_back(async(&Player::minimaxHelper, this, depth - 1, boards[i++],
-				_opponentSide, alpha, beta));
-    }
-    
-    for (vector<future<int> >::iterator it = futures.begin(); it != futures.end(); ++it) {
-	cerr <<  "Score: " << it->get() << endl;
-    }
-    */
-    
     return best;
 }
 
@@ -155,52 +136,55 @@ Move *Player::findMinimaxMove(int depth) {
 int Player::minimaxHelper(int depth, Board *b, Side s, int alpha, int beta) {
     // Base Case: Just evaluate board
     if (depth == 0) {
-	return this->evaluate(b);
-    }
-    else {
-	vector<Move *> moves;
-	b->getPossibleMoves(s, moves);
-
-	// There are no more possible moves
-	if (moves.empty()) {
 	    return this->evaluate(b);
-	}
-	if (s == _side) {
-	    alpha = INT_MIN;
-	    for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
-		Board *nextBoard = b->copy();
-		nextBoard->doMove(*it, s);
-		
-		// Wants to maximize the possible score
-		int score = this->minimaxHelper(depth - 1, nextBoard, _opponentSide, alpha, beta);
-		alpha = max(alpha, score);
-		
-		if (beta <= alpha) {
-		    break;
-		}
-		delete *it;
-		delete nextBoard;
-	    }
-	    return alpha;
-	}
-	else {
-	    beta = INT_MAX;
-	    for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
-		Board *nextBoard = b->copy();
-		nextBoard->doMove(*it, s);
-		
-		// Opponent wants to minimize the possible score
-		int score = this->minimaxHelper(depth - 1, nextBoard, _side, alpha, beta);
-		beta = min(beta, score);
-		
-		if (beta <= alpha) {
-		    break;
-		}
-		delete *it;
-		delete nextBoard;
-	    }
-	    return beta;
-	}
+    }
+    bitset<64> moves = b->getPossibleMoves(s);
+    
+    // There are no more possible moves
+    if (moves.none()) {
+        return this->evaluate(b);
+    }
+    
+    Move current_move = Move(0,0);
+    Board *next_board;
+    int score;
+    
+    if (s == _side) {
+        alpha = INT_MIN;
+        for (int i = 0; i < 64; i++) {
+            if (moves.test(i)) {
+                current_move = Move(i % 8, i / 8);
+                next_board = b->copy();
+                next_board->doMove(&current_move, s);
+                
+                //Wants to maximize the possible score
+                score = this->minimaxHelper(depth - 1, next_board, _opponentSide, alpha, beta);
+                delete next_board;
+                alpha = max(alpha, score);
+                if (beta <= alpha) {
+                    break;
+                }
+            }
+        }
+        return alpha;
+    } else {
+        beta = INT_MAX;
+        for (int i = 0; i < 64; i++) {
+            if (moves.test(i)) {
+                current_move = Move(i % 8, i / 8);
+                next_board = b->copy();
+                next_board->doMove(&current_move, s);
+                
+                //Wants to maximize the possible score
+                score = this->minimaxHelper(depth - 1, next_board, _side, alpha, beta);
+                delete next_board;
+                beta = min(beta, score);
+                if (beta <= alpha) {
+                    break;
+                }
+            }
+        }
+        return beta;
     }
 }
 
@@ -231,25 +215,27 @@ int Player::evaluate(Board *b) {
 	    return _table[hash];
 	}
 	else {
-	    /* TODO: Update the heuristic with a better one that takes into
-	     * account position of pieces, frontier, stability, etc.
-	     */
 	    int score = 0;
-
-	    bitset<64> white = (b->taken & ~(b->black));
-	    score += (b->black).count();
-	    score += EDGEWEIGHT * (b->black & EDGES).count();
-	    score += CORNERWEIGHT * (b->black & CORNERS).count();
-	    score -= CORNERWEIGHT/4 * (b->black & NEXTTOCORNERS).count();
-	    
-	    score -= white.count();
-	    score -= EDGEWEIGHT * (white & EDGES).count();
-	    score -= CORNERWEIGHT * (white & CORNERS).count();
-	    score += CORNERWEIGHT/4 * (white & NEXTTOCORNERS).count();
-	    
-	    if (_side == WHITE) {
-		score *= -1;
-	    }
+        bitset<64> white = (b->taken & ~(b->black));
+        // Coin count
+        score += (b->black).count() - white.count();
+        
+        // Edges and corners
+        score += EDGEWEIGHT * (b->black & EDGES).count();
+        score += CORNERWEIGHT * (b->black & CORNERS).count();
+        score -= EDGEWEIGHT * (white & EDGES).count();
+        score -= CORNERWEIGHT * (white & CORNERS).count();
+        
+        // Mobility
+        bitset<64> next_moves;
+        next_moves = b->getPossibleMoves(BLACK);
+        score += next_moves.count();
+        next_moves = b->getPossibleMoves(WHITE);
+        score -= next_moves.count();
+        
+        if (_side == WHITE) {
+            score *= -1;
+        }
 	    
 	    // Keeps transposition table at fixed size
 	    if (_table.size() >= 100000) {
@@ -274,24 +260,24 @@ void Player::computeOpening() {
     // Computes initial 25000 board positions, and stores their 
     // score in the transposition table
     while (_table.size() < 25000) {
-	pair<Side, Board *> curr = positions.front();
-	this->evaluate(curr.second);
+	    pair<Side, Board *> curr = positions.front();
+	    this->evaluate(curr.second);
 	
-	positions.erase(positions.begin());
+    	positions.erase(positions.begin());
 
-	vector<Move *> moves;
-	curr.second->getPossibleMoves(curr.first, moves);
-    Side next = (curr.first == BLACK) ? (WHITE) : (BLACK);
-
-	
-	for (vector<Move *>::iterator it = moves.begin(); it != moves.end(); ++it) {
-	    Board *nextBoard = curr.second->copy();
-	    nextBoard->doMove(*it, curr.first);
-	    
-	    positions.push_back(make_pair(next, nextBoard));
-	}
-	
-	delete curr.second;
+        bitset<64> moves = curr.second->getPossibleMoves(curr.first);
+        Side next_side = (curr.first == BLACK) ? (WHITE) : (BLACK);
+        Move current_move = Move(0,0);
+        
+        for (int i = 0; i < 64; i++) {
+            if (moves.test(i)) {
+                current_move = Move(i % 8, i / 8);
+                Board *next_board = curr.second->copy();
+                next_board->doMove(&current_move, curr.first);
+                positions.push_back(make_pair(next_side, next_board));
+            }
+        }
+        delete curr.second;
     }
     
     while (!positions.empty()) {
