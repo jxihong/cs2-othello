@@ -8,8 +8,9 @@ Joey:
 
 Ethan:
 - Debugging bitboard algorithms
-- Implemented and improved heuristics
+- Implemented and improved heuristics (experimenting with different options)
 - Optimized performance on findBestMove using bitboards
+- Tested possible optimizations with hashing
 
 
 Generating Possible Moves
@@ -48,11 +49,19 @@ was easy to compute.
 
 Heuristics
 -----------------------------------------------
-We used a combination of heuristics to evaluate board states.
-- Coin count: the number of tokens for our side, minus those of the other
-- Corners and edges: edges (and corners in particular) are particularly 
-	strategic squares to have, and thus get weighted extra
-- Mobility: maximize the number of possible moves for us, minus the 
-	number of possible moves for the opponent
+We came to the eventual conclusion that the best heuristic approach was one
+that was simple, easy to compute, and therefore able to reach high move depths
+in the tree search.  Our final heuristic returns +/- infinity for a winning or
+losing board (no pieces remaining), and a very simple location-based heuristic
+based off of coin count and corner weights otherwise.  Due to the bitset 
+optimizations, this simple heuristic can effectively reach high depths, which
+has the effect of weighting "mobility", "stability", and all other possible
+heuristic measures.  As with a lot of AI, the simpler model is better.
 
 https://kartikkukreja.wordpress.com/2013/03/30/heuristic-function-for-reversiothello/
+
+Hashing
+-----------------------------------------------
+Hashing minimax_helper() was too costly to implement with alpha-beta pruning,
+since this optimization means that minimax_helper() will return different values
+for the same board but different values of alpha or beta.
