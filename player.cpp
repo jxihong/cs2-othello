@@ -70,9 +70,9 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     	    m = (testingMinimax) ? 
     		(this->findMinimaxMove(2)) : (this->findMinimaxMove(depth++));
     	}
-    	/* FOR DEBUGGING
+    	// FOR DEBUGGING
     	std::cerr << depth << std::endl;
-    	*/
+    	
     } else {
     	m = (testingMinimax) ? 
     	    (this->findMinimaxMove(2)) : (this->findMinimaxMove(MINIMAXDEPTH));
@@ -134,9 +134,24 @@ Move *Player::findMinimaxMove(int depth) {
  * and the best move.
  */
 int Player::minimaxHelper(int depth, Board *b, Side s, int alpha, int beta) {
+    // Compute the bitsets for ai and opponent sides, and converts
+    // to a 64-bit integer
+    unsigned long long black = (b->black).to_ullong(), total = (b->taken).to_ullong();
+            
+    // Hash value is simply concatenation of 2 integers
+    // TODO: hash minimax helper instead?
+    string hash = to_string(black) + ", " + to_string(total) + ", ";
+    if (_table.find(hash + to_string(depth)) != _table.end()) {
+        return _table[hash];
+    }
+        
+    int answer;
+    
     // Base Case: Just evaluate board
     if (depth == 0) {
-	    return this->evaluate(b);
+	    answer = this->evaluate(b);
+        _table[hash + to_string(0)] = answer;
+        return answer;
     }
     bitset<64> moves = b->getPossibleMoves(s);
     
@@ -166,7 +181,7 @@ int Player::minimaxHelper(int depth, Board *b, Side s, int alpha, int beta) {
                 }
             }
         }
-        return alpha;
+        answer = alpha;
     } else {
         beta = INT_MAX;
         for (int i = 0; i < 64; i++) {
@@ -184,8 +199,20 @@ int Player::minimaxHelper(int depth, Board *b, Side s, int alpha, int beta) {
                 }
             }
         }
-        return beta;
+        answer = beta;
     }
+    
+    // Keeps transposition table at fixed size
+    while (_table.size() >= 100000) {
+        // Removes the first key, since it is probably the furthest 
+        // away from the current game state
+        _table.erase(_table.begin());
+    }
+    
+    for (int d = 0; d <= depth; d++) {
+        _table[hash + to_string(d)] = answer;
+    }
+    return answer;
 }
 
 /*
@@ -194,28 +221,9 @@ int Player::minimaxHelper(int depth, Board *b, Side s, int alpha, int beta) {
  */ 
 int Player::evaluate(Board *b) {
     if (testingMinimax) {
-	return b->count(_side) - b->count(_opponentSide);
+	    return b->count(_side) - b->count(_opponentSide);
     }
     else {
-	// Compute the bitsets for ai and opponent sides, and converts
-	// to a 64-bit integer
-	unsigned long long ai_side, total;
-	if (_side == BLACK) {
-	    ai_side = (b->black).to_ullong();
-	    total = (b->taken).to_ullong();
-	}
-	else {
-	    ai_side = (~(b->black) & (b->taken)).to_ullong();
-	    total = (b->taken).to_ullong();
-	}
-	
-	// Hash value is simply concatenation of 2 integers
-    // TODO: hash minimax helper instead?
-	string hash = to_string(ai_side) + ", " + to_string(total);
-	if (_table.find(hash) != _table.end()) {
-	    return _table[hash];
-	}
-	else {
 	    int score = 0;
         bitset<64> white = (b->taken & ~(b->black));
         
@@ -249,16 +257,7 @@ int Player::evaluate(Board *b) {
         if (_side == WHITE) {
             score *= -1;
         }
-	    
-	    // Keeps transposition table at fixed size
-	    if (_table.size() >= 100000) {
-		// Removes the first key, since it is probably the furthest 
-		// away from the current game state
-		_table.erase(_table.begin());
-	    }
-	    _table[hash] = score;
 	    return score;
-	} 
     }
 }
 
@@ -267,40 +266,42 @@ int Player::evaluate(Board *b) {
  * looked up quickly.
  */
 void Player::computeOpening() {
-    vector<pair<Side, Board *> > positions;
-    positions.push_back(make_pair(_side, _board->copy()));
+    //vector<pair<Side, Board *> > positions;
+    //positions.push_back(make_pair(_side, _board->copy()));
     
     // Computes initial 25000 board positions, and stores their 
     // score in the transposition table
     
     // TODO: if time is limited, don't fill table all the way here
-        
-    while (_table.size() < 25000) {
-	    pair<Side, Board *> curr = positions.front();
-	    this->evaluate(curr.second);
-	
-    	positions.erase(positions.begin());
-
-        bitset<64> moves = curr.second->getPossibleMoves(curr.first);
-        Side next_side = (curr.first == BLACK) ? (WHITE) : (BLACK);
-        Move current_move = Move(0,0);
-        
-        for (int i = 0; i < 64; i++) {
-            if (moves.test(i)) {
-                current_move = Move(i % 8, i / 8);
-                Board *next_board = curr.second->copy();
-                next_board->doMove(&current_move, curr.first);
-                positions.push_back(make_pair(next_side, next_board));
-            }
-        }
-        delete curr.second;
-    }
-    
-    while (!positions.empty()) {
-	pair<Side, Board *> it = positions.back();
-	positions.pop_back();
-	delete it.second;
-    }
+     
+    findMinimaxMove(8);
+       
+//    while (_table.size() < 25000) {
+//	    pair<Side, Board *> curr = positions.front();
+//	    this->evaluate(curr.second);
+//	
+//    	positions.erase(positions.begin());
+//
+//        bitset<64> moves = curr.second->getPossibleMoves(curr.first);
+//        Side next_side = (curr.first == BLACK) ? (WHITE) : (BLACK);
+//        Move current_move = Move(0,0);
+//        
+//        for (int i = 0; i < 64; i++) {
+//            if (moves.test(i)) {
+//                current_move = Move(i % 8, i / 8);
+//                Board *next_board = curr.second->copy();
+//                next_board->doMove(&current_move, curr.first);
+//                positions.push_back(make_pair(next_side, next_board));
+//            }
+//        }
+//        delete curr.second;
+//    }
+//    
+//    while (!positions.empty()) {
+//	pair<Side, Board *> it = positions.back();
+//	positions.pop_back();
+//	delete it.second;
+//    }
 	
 }
 

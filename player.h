@@ -11,7 +11,7 @@
 #define CORNERWEIGHT 16
 #define MOBILITYWEIGHT 4
 #define STABILITYWEIGHT 4
-#define TIMESPLIT 100
+#define TIMESPLIT 64
 
 using namespace std;
 
