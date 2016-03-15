@@ -210,6 +210,7 @@ int Player::evaluate(Board *b) {
 	}
 	
 	// Hash value is simply concatenation of 2 integers
+    // TODO: hash minimax helper instead?
 	string hash = to_string(ai_side) + ", " + to_string(total);
 	if (_table.find(hash) != _table.end()) {
 	    return _table[hash];
@@ -217,6 +218,14 @@ int Player::evaluate(Board *b) {
 	else {
 	    int score = 0;
         bitset<64> white = (b->taken & ~(b->black));
+        
+        // Check for winning board
+        if ((b->black).count() == 0) {
+            return (_side == BLACK) ? INT_MIN : INT_MAX;
+        } else if (white.count() == 0) {
+            return (_side == WHITE) ? INT_MIN : INT_MAX;
+        }
+        
         // Coin count
         score += (b->black).count() - white.count();
         
@@ -227,11 +236,15 @@ int Player::evaluate(Board *b) {
         score -= CORNERWEIGHT * (white & CORNERS).count();
         
         // Mobility
-        bitset<64> next_moves;
-        next_moves = b->getPossibleMoves(BLACK);
-        score += next_moves.count();
-        next_moves = b->getPossibleMoves(WHITE);
-        score -= next_moves.count();
+//        bitset<64> next_moves;
+//        next_moves = b->getPossibleMoves(BLACK);
+//        score += next_moves.count();
+//        next_moves = b->getPossibleMoves(WHITE);
+//        score -= next_moves.count();
+        
+        // Stability
+//        score += STABILITYWEIGHT * b->getStablePieceCount(BLACK);
+//        score -= STABILITYWEIGHT * b->getStablePieceCount(WHITE);
         
         if (_side == WHITE) {
             score *= -1;
@@ -259,6 +272,9 @@ void Player::computeOpening() {
     
     // Computes initial 25000 board positions, and stores their 
     // score in the transposition table
+    
+    // TODO: if time is limited, don't fill table all the way here
+        
     while (_table.size() < 25000) {
 	    pair<Side, Board *> curr = positions.front();
 	    this->evaluate(curr.second);
